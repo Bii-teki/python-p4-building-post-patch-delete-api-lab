@@ -10,6 +10,8 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.json.compact = False
 
+
+
 migrate = Migrate(app, db)
 
 db.init_app(app)
@@ -29,6 +31,92 @@ def bakeries():
         200
     )
     return response
+
+@app.route('/baked_goods', methods=['GET', 'POST'])
+def baked_goods():
+    baked_good =[]
+    if request.method == 'GET':
+       
+        for backed in BakedGood.query.all():
+            backed_dict = backed.to_dict()
+            baked_good.append(backed_dict)
+            
+        response = make_response(
+            jsonify(baked_good), 201, {"Content-Type": "application/json"}
+        )
+        return response
+
+    elif request.method == 'POST':
+        new_baked = BakedGood(
+            name=request.form.get("name"),
+            price=request.form.get("price"),
+            bakery_id=request.form.get("bakery_id"),
+            
+        )
+
+        db.session.add(new_baked)
+        db.session.commit()
+
+        backed_dict = new_baked.to_dict()
+
+        response = make_response(
+            jsonify(backed_dict),
+            201
+        )
+
+        return response 
+    
+@app.route('/baked_goods/<int:id>', methods=['DELETE']) 
+def baked_goodsw(id):
+    baked_good = BakedGood.query.filter_by(id=id).first()
+    if request.method == 'DELETE':        
+        
+        db.session.delete(baked_good)
+        db.session.commit()
+
+        response_body = {
+            "delete_successful": True,
+            "message": "Review deleted."    
+        }
+
+        response = make_response(
+            jsonify(response_body),
+            200
+        )
+        return response
+           
+    
+@app.route('/bakeries/<int:id>', methods=['GET','PATCH'], endpoint='update_bakery')
+def bakeries(id):
+    
+    bakes = Bakery.query.filter_by(id=id).first() 
+       
+
+    if not bakes:
+        return jsonify({"message": "Bakery not found"}), 404
+    
+    if request.method == 'GET':        
+        
+        bake_dict= bakes.to_dict()
+        response = make_response(
+            jsonify(bake_dict),
+            200
+        )
+        return response
+               
+    elif request.method == 'PATCH': 
+        for attr in request.form:
+            setattr(bakes, attr, request.form.get(attr))
+        db.session.add(bakes)
+        db.session.commit()
+        bakery_dict = bakes.to_dict()
+        response = make_response(bakery_dict, 200)
+        return response
+ 
+         
+            
+            
+
 
 @app.route('/bakeries/<int:id>')
 def bakery_by_id(id):
